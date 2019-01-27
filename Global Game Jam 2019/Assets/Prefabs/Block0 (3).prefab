@@ -19,12 +19,13 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4570245042447518}
+  - component: {fileID: 114801917634769076}
   - component: {fileID: 212836750280690670}
   - component: {fileID: 60958638266918444}
   - component: {fileID: 50878009644869242}
   m_Layer: 0
   m_Name: Block0 (3)
-  m_TagString: Untagged
+  m_TagString: Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -91,6 +92,19 @@ PolygonCollider2D:
       - {x: -0.3247198, y: -0.453125}
       - {x: 0.453125, y: 0.3338112}
       - {x: 0.453125, y: 0.453125}
+--- !u!114 &114801917634769076
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1532579609566520}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b2a377869a0662408af8e6b834b658f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  placing: 0
+  placed: 0
 --- !u!212 &212836750280690670
 SpriteRenderer:
   m_ObjectHideFlags: 1
