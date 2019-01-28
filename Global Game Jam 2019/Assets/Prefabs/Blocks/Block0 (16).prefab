@@ -106,6 +106,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   placing: 0
   placed: 0
+  sndBlockHits:
+  - {fileID: 8300000, guid: dbc9605b29378ad418086157a516ee0e, type: 3}
+  - {fileID: 8300000, guid: ec57b175809211045af9cb60b6c2c803, type: 3}
 --- !u!212 &212119040989315002
 SpriteRenderer:
   m_ObjectHideFlags: 1

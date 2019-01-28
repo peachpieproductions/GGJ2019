@@ -6,13 +6,19 @@ public class FamilyMember : MonoBehaviour {
 
     public bool dead;
     public Sprite deadSprite;
+    public AudioClip deathSound;
+    public float size = 1f;
 
+    private void OnMouseDown() {
+        AudioManager.PlayOneShot(deathSound,1,false,size);
+    }
 
 
     private void OnCollisionEnter2D(Collision2D collision) {
         if (!dead) {
             if (collision.transform.CompareTag("Block")) {
                 dead = true;
+                AudioManager.PlayOneShot(deathSound, 1, false, size);
                 for (var i = 0; i < 5; i++) {
                     var index = Random.Range(0, GameController.inst.gibs.Length);
                     var inst = Instantiate(GameController.inst.gibs[index],

@@ -5,17 +5,25 @@ using UnityEngine;
 public class CommunismCrate : MonoBehaviour {
 
 
-
+    public AudioClip sndSmash;
+    public AudioClip sndHit;
 
 
 
     private void OnMouseDown() {
         Destroy(gameObject);
+        AudioManager.PlayOneShot(sndSmash);
         for(var i = 0; i < 4; i++) {
-            var inst = Instantiate(GameController.inst.blockPrefabs[Random.Range(0, GameController.inst.blockPrefabs.Length)], 
+            var index = Random.Range(0, GameController.inst.blockPrefabs.Length);
+            var inst = Instantiate(GameController.inst.blockPrefabs[index], 
                 transform.position + Vector3.left * (i), Quaternion.Euler(0,0,90));
-            if (Random.value > .5f) inst.transform.localScale = new Vector3(-1, 1, 1);
+            if (Random.value > .5f && (index == 3 || index == 5 || index == 11 || index == 14 || index == 16)) inst.transform.localScale = new Vector3(-1, 1, 1);
+            inst.GetComponent<Rigidbody2D>().velocity += (Vector2) Vector3.up * Random.Range(1, 5f);
         }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision) {
+        AudioManager.PlayOneShot(sndHit);
     }
 
 

@@ -15,6 +15,8 @@ public class MusicManager : MonoBehaviour {
 
     IEnumerator Music() {
 
+        yield return new WaitForSeconds(2.8f);
+
         while (true) {
 
             audioSource.clip = songs[currentSong];

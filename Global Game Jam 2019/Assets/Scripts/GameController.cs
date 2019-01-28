@@ -29,6 +29,10 @@ public class GameController : MonoBehaviour {
     public TextMeshProUGUI highscoreNameText;
     public TextMeshProUGUI newPointsText;
 
+    [Header("Sound Effects")]
+    public AudioClip sndPlane;
+    public AudioClip sndNewHighScore;
+
 
     bool newHighScoreAchieved;
 
@@ -121,6 +125,8 @@ public class GameController : MonoBehaviour {
 
         while(!gameOver) {
 
+            AudioManager.PlayOneShot(sndPlane, .8f, false);
+
             yield return new WaitForSeconds(2f);
 
             var inst = Instantiate(communistCrate);
@@ -145,6 +151,7 @@ public class GameController : MonoBehaviour {
     }
 
     IEnumerator NewHighScore() {
+        AudioManager.PlayOneShot(sndNewHighScore, 1, false);
         newHighScoreAchieved = true;
         newHighScoreText.SetActive(true);
         yield return new WaitForSeconds(5f);
