@@ -23,7 +23,7 @@ public class CommunismCrate : MonoBehaviour {
     }
 
     private void OnCollisionEnter2D(Collision2D collision) {
-        AudioManager.PlayOneShot(sndHit);
+        AudioManager.PlayOneShot(sndHit,.7f);
     }
 
 

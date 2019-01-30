@@ -32,10 +32,12 @@ public class GameController : MonoBehaviour {
     public GameObject invisibleWall;
     public ParticleSystem sparksPs;
     public List<Vector2> sparksQueue;
+    public int screenshotIndex;
 
     [Header("Sound Effects")]
     public AudioClip sndPlane;
     public AudioClip sndNewHighScore;
+    public AudioClip sndScreenshot;
 
 
     bool newHighScoreAchieved;
@@ -43,6 +45,7 @@ public class GameController : MonoBehaviour {
     private void Start() {
         inst = this;
         highScore = PlayerPrefs.GetInt("highscore01");
+        screenshotIndex = PlayerPrefs.GetInt("screenshotIndex");
         if (highScore > 0) highscoreTopRightText.text = "Highscore: " + highScore.ToString("#,#");
         else highscoreTopRightText.text = "";
         highscoreNameText.text = PlayerPrefs.GetString("highscore01name");
@@ -134,7 +137,20 @@ public class GameController : MonoBehaviour {
 
     public void SparkEffect(Vector2 pos) {
         sparksQueue.Add(pos);
-        
+    }
+
+    public void TakeScreenshot() {
+        StartCoroutine(Screenshot());
+    }
+    IEnumerator Screenshot() {
+        AudioManager.PlayOneShot(sndScreenshot,.8f,false);
+        scoreText.transform.parent.gameObject.SetActive(false);
+        yield return null;
+        ScreenCapture.CaptureScreenshot("Screenshot_" + screenshotIndex + ".png");
+        yield return null;
+        scoreText.transform.parent.gameObject.SetActive(true);
+        PlayerPrefs.SetInt("screenshotIndex",++screenshotIndex);
+        Debug.Log(Application.persistentDataPath);
     }
 
     IEnumerator Sparks() {

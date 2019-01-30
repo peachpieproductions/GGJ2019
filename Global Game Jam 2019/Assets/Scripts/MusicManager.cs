@@ -7,10 +7,20 @@ public class MusicManager : MonoBehaviour {
     public AudioClip[] songs;
     public AudioSource audioSource;
 
+    float musicVol;
+    bool musicOn = true;
+
     int currentSong;
 
     public void Start() {
+        musicVol = audioSource.volume;
         StartCoroutine(Music());
+    }
+
+    public void ToggleMusicOnOff() {
+        musicOn = !musicOn;
+        if (musicOn) audioSource.volume = musicVol;
+        else audioSource.volume = 0;
     }
 
     IEnumerator Music() {
