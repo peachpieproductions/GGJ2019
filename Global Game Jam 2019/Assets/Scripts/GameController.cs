@@ -20,6 +20,7 @@ public class GameController : MonoBehaviour {
     public GameObject gameOverText;
     public GameObject newHighScoreText;
     public TextMeshProUGUI scoreText;
+    public GameObject scoreUnderline;
     public TextMeshProUGUI highscoreTopRightText;
     public int score;
     public int highScore;
@@ -28,6 +29,9 @@ public class GameController : MonoBehaviour {
     public Text inputFieldText;
     public TextMeshProUGUI highscoreNameText;
     public TextMeshProUGUI newPointsText;
+    public GameObject invisibleWall;
+    public ParticleSystem sparksPs;
+    public List<Vector2> sparksQueue;
 
     [Header("Sound Effects")]
     public AudioClip sndPlane;
@@ -43,6 +47,7 @@ public class GameController : MonoBehaviour {
         else highscoreTopRightText.text = "";
         highscoreNameText.text = PlayerPrefs.GetString("highscore01name");
         StartCoroutine(GameLoop());
+        StartCoroutine(Sparks());
     }
 
     public void Update() {
@@ -79,14 +84,9 @@ public class GameController : MonoBehaviour {
                 if (mouseWorldPos.y > 0 || mouseWorldPos.x > -5) { //cant drop block in crate area
                     currentBlock.SetActive(true);
                     currentBlock.GetComponent<Block>().placed = true;
+                    currentBlock.layer = 9 >> 0;
                     currentBlock.transform.rotation = placementSprite.rotation;
                     currentBlock.transform.position = placementSprite.position;
-                    int newPoints = Mathf.RoundToInt(currentBlock.transform.position.y + 5) * 100;
-                    if (!gameOver) score += newPoints;
-                    if (corNewPoints != null) StopCoroutine(corNewPoints);
-                    corNewPoints = StartCoroutine(NewPoints(newPoints));
-                    if (score > highScore && !newHighScoreAchieved && highScore > 0) { StartCoroutine(NewHighScore()); }
-                    scoreText.text = score.ToString("#,#");
                     currentRot = 0;
                     placementSprite.eulerAngles = new Vector3(0, 0, currentRot);
                     placementSprite.gameObject.SetActive(false);
@@ -101,10 +101,21 @@ public class GameController : MonoBehaviour {
         cam.orthographicSize = Mathf.Max(2,cam.orthographicSize - Input.mouseScrollDelta.y * .5f);
     }
 
+    public void AddPoints(float blockHeight) {
+        if (!scoreUnderline.activeSelf) scoreUnderline.SetActive(true);
+        int newPoints = Mathf.RoundToInt(blockHeight + 5) * 100;
+        if (!gameOver) score += newPoints;
+        if (corNewPoints != null) StopCoroutine(corNewPoints);
+        corNewPoints = StartCoroutine(NewPoints(newPoints));
+        if (score > highScore && !newHighScoreAchieved && highScore > 0) { StartCoroutine(NewHighScore()); }
+        scoreText.text = score.ToString("#,#");
+    }
+
     public void GameOver() {
         if (!gameOver) {
             gameOver = true;
             gameOverText.SetActive(true);
+            invisibleWall.SetActive(false);
 
             if (score > highScore) {
                 highScore = score;
@@ -119,6 +130,23 @@ public class GameController : MonoBehaviour {
         placementSprite.GetComponent<SpriteRenderer>().sprite = currentBlock.GetComponent<SpriteRenderer>().sprite;
         placementSprite.transform.localScale = currentBlock.transform.localScale;
         placementSprite.gameObject.SetActive(true);
+    }
+
+    public void SparkEffect(Vector2 pos) {
+        sparksQueue.Add(pos);
+        
+    }
+
+    IEnumerator Sparks() {
+        while (true) {
+            if (sparksQueue.Count > 0) {
+                sparksPs.transform.position = (Vector3)sparksQueue[0] + Vector3.back * .5f;
+                sparksPs.Play();
+                sparksQueue.RemoveAt(0);
+                if (sparksQueue.Count > 40) sparksQueue.Clear();
+            }
+            yield return new WaitForSeconds(.01f);
+        }
     }
 
     IEnumerator GameLoop() {

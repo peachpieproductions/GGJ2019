@@ -24,7 +24,7 @@ GameObject:
   - component: {fileID: 61908771462434080}
   m_Layer: 0
   m_Name: Gib6
-  m_TagString: Untagged
+  m_TagString: Family
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -78,7 +78,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.25, y: 0.09375}
+    oldSize: {x: 0.3125, y: 0.15625}
     newSize: {x: 0.1875, y: 0.125}
     adaptiveTilingThreshold: 0.5
     drawMode: 0

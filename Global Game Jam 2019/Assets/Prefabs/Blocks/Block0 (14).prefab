@@ -23,7 +23,7 @@ GameObject:
   - component: {fileID: 212415344870960084}
   - component: {fileID: 50523545137701346}
   - component: {fileID: 60376039631639798}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Block0 (14)
   m_TagString: Block
   m_Icon: {fileID: 0}
@@ -89,7 +89,7 @@ PolygonCollider2D:
     m_Paths:
     - - {x: -0.46908116, y: 0.96982217}
       - {x: -0.468549, y: -0.03055501}
-      - {x: -1.4686165, y: -0.031676054}
+      - {x: -1.4690833, y: -0.028781176}
       - {x: -1.46875, y: -0.96875}
       - {x: 1.46875, y: -0.96875}
       - {x: 1.4684154, y: -0.030192614}
@@ -108,6 +108,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   placing: 0
   placed: 0
+  scored: 0
   sndBlockHits:
   - {fileID: 8300000, guid: dbc9605b29378ad418086157a516ee0e, type: 3}
   - {fileID: 8300000, guid: ec57b175809211045af9cb60b6c2c803, type: 3}
