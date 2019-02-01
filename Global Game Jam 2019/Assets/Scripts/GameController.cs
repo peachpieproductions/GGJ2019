@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public class GameController : MonoBehaviour {
 
+    
+
     public static GameController inst;
     public bool gameOver;
     public GameObject[] blockPrefabs;
@@ -33,14 +35,36 @@ public class GameController : MonoBehaviour {
     public ParticleSystem sparksPs;
     public List<Vector2> sparksQueue;
     public int screenshotIndex;
+    public GameObject helperArrow;
 
+    //Touch / Mobile
+    public static bool touch;
+    public static float touchTimer;
+    [Header("Touch / Mobile")]
+    public GameObject touchRestartButton;
+    public GameObject touchRotateButton;
+    public Vector2 startTouchPos;
+    bool twoFingersDown;
+    float prevTwoFingerDist;
+    bool dragging;
+
+    //SNDFX
     [Header("Sound Effects")]
     public AudioClip sndPlane;
     public AudioClip sndNewHighScore;
     public AudioClip sndScreenshot;
+    public AudioClip sndPlaceBlock;
+    public AudioClip sndCenterBlock;
+    public AudioClip sndRotateBlock;
 
 
     bool newHighScoreAchieved;
+
+    private void Awake() {
+        #if UNITY_ANDROID
+            touch = true;
+        #endif
+    }
 
     private void Start() {
         inst = this;
@@ -49,27 +73,48 @@ public class GameController : MonoBehaviour {
         if (highScore > 0) highscoreTopRightText.text = "Highscore: " + highScore.ToString("#,#");
         else highscoreTopRightText.text = "";
         highscoreNameText.text = PlayerPrefs.GetString("highscore01name");
+
+        if (touch) {
+            touchRestartButton.SetActive(true);
+        }
+
         StartCoroutine(GameLoop());
         StartCoroutine(Sparks());
+        StartCoroutine(HelperArrow());
+    }
+
+    private void LateUpdate() {
+        if (touch) {
+            if (Input.GetMouseButtonUp(0) && touchTimer < .2f && !dragging) {
+                PlaceBlock();
+            }
+        } 
     }
 
     public void Update() {
-        mouseWorldPos = cam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 1));
-        placementSprite.position = mouseWorldPos;
-        placementSprite.position += Vector3.back * .1f;
 
-        if (gameOver) {
-            if (Input.GetKeyDown(KeyCode.R) && !inputField.isFocused) {
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        //Set mouse world position
+        mouseWorldPos = cam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 1));
+
+        //Set placement sprite
+        if (!touch) {
+            placementSprite.position = mouseWorldPos;
+            //placementSprite.position += Vector3.back * .1f;
+        } else {
+            if (currentBlock && Input.touchCount == 1) {
+                placementSprite.position += (Vector3) Input.GetTouch(0).deltaPosition * Time.deltaTime;
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.R) || Input.GetMouseButtonDown(2)) {
-            if (currentBlock) {
-                currentRot += 45;
-                if (currentRot > 360) currentRot -= 360;
-                placementSprite.eulerAngles = new Vector3(0, 0, currentRot);
+
+        //Game Over
+        if (gameOver) {
+
+            //Restart Game
+            if (Input.GetKeyDown(KeyCode.R) && !inputField.isFocused) {
+                RestartGame();
             }
+            
         }
 
         //Erase Files
@@ -78,40 +123,140 @@ public class GameController : MonoBehaviour {
                 if (Input.GetKeyDown(KeyCode.Delete)) {
                     PlayerPrefs.DeleteKey("highscore01");
                     PlayerPrefs.DeleteKey("highscore01name");
+                    PlayerPrefs.DeleteKey("screenshotIndex");
+                    AudioManager.PlayOneShot(sndNewHighScore);
                 }
             }
         }
 
-        if (Input.GetMouseButtonDown(0)) {
-            if (currentBlock) {
-                if (mouseWorldPos.y > 0 || mouseWorldPos.x > -5) { //cant drop block in crate area
-                    currentBlock.SetActive(true);
-                    currentBlock.GetComponent<Block>().placed = true;
-                    currentBlock.layer = 9 >> 0;
-                    currentBlock.transform.rotation = placementSprite.rotation;
-                    currentBlock.transform.position = placementSprite.position;
-                    currentRot = 0;
-                    placementSprite.eulerAngles = new Vector3(0, 0, currentRot);
-                    placementSprite.gameObject.SetActive(false);
-                    currentBlock = null;
+        //Place Current Block
+        if (!touch) {
+            if (Input.GetMouseButtonUp(0)) {
+                PlaceBlock();
+            }
+        }
+
+        //Rotate Current Block
+        if (Input.GetKeyDown(KeyCode.R) || Input.GetMouseButtonDown(2)) {
+            if (Input.GetKey(KeyCode.LeftShift)) RotateBlock(false);
+            else RotateBlock(true);
+        }
+
+
+        //Camera Control
+        if (touch) {
+
+            if (Input.touchCount > 0) {
+                touchTimer += Time.deltaTime;
+
+                if (Input.touches[0].deltaPosition.magnitude > .4f) dragging = true;
+
+                //Camera Zoom (touch)
+                float fingerDistDelta = 0f;
+                if (Input.touchCount > 1) {
+                    if (!twoFingersDown) {
+                        twoFingersDown = true;
+                        prevTwoFingerDist = (Input.touches[0].position - Input.touches[1].position).magnitude;
+                    }
+                    fingerDistDelta = prevTwoFingerDist - (Input.touches[0].position - Input.touches[1].position).magnitude;
+                    if (Mathf.Abs(fingerDistDelta) > 2) cam.orthographicSize = cam.orthographicSize + fingerDistDelta * Time.deltaTime * .5f;
+                    prevTwoFingerDist = (Input.touches[0].position - Input.touches[1].position).magnitude;
+                } else {
+                    twoFingersDown = false;
+                }
+
+                //Camera Movement (touch)
+                if (Input.touchCount > 1 || Input.touchCount == 1 && currentBlock == null) {
+                    if (Input.GetTouch(0).deltaPosition.magnitude > 2f) {
+                        cam.transform.position -= (Vector3)Input.GetTouch(0).deltaPosition * Time.deltaTime * .8f * Mathf.Max(1, (cam.orthographicSize - 6) * .2f);
+                    }
+                }
+                
+            }
+            if (Input.GetMouseButtonDown(0)) { //Touch Down
+                touchTimer = 0;
+                dragging = false;
+            }
+            if (Input.GetMouseButtonUp(0)) { //Touch Up
+                
+            }
+        } else {
+            //Camera Movement
+            if (Input.GetMouseButton(1)) {
+                cam.transform.position -= new Vector3(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"), 0) * Time.deltaTime * (7 + cam.orthographicSize);
+            }
+            if (!inputField.isFocused) cam.transform.position += new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Time.deltaTime * 10f;
+
+            //Camera Zoom
+            cam.orthographicSize = cam.orthographicSize - Input.mouseScrollDelta.y * .5f;
+        }
+
+        //Camera Bounds
+        cam.transform.position = new Vector3(Mathf.Clamp(cam.transform.position.x, -20, 20), Mathf.Max(-8, cam.transform.position.y), cam.transform.position.z);
+        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, 2f, 40f);
+
+        //Sin wave for helper arrow
+        if (helperArrow.activeSelf) helperArrow.transform.GetChild(0).localPosition = new Vector3(0, Mathf.Sin(Time.time * 5) * .75f, 0);
+    }
+
+    public void PlaceBlock() {
+        if (currentBlock) {
+            if (placementSprite.position.y > 0 || placementSprite.position.x > -6) { //cant drop block in crate area
+                AudioManager.PlayOneShot(sndPlaceBlock, .35f);
+                currentBlock.SetActive(true);
+                currentBlock.GetComponent<Block>().placed = true;
+                currentBlock.layer = 9 >> 0;
+                currentBlock.transform.rotation = placementSprite.rotation;
+                currentBlock.transform.position = placementSprite.position;
+                currentRot = 0;
+                placementSprite.eulerAngles = new Vector3(0, 0, currentRot);
+                placementSprite.gameObject.SetActive(false);
+                currentBlock = null;
+                if (touch) {
+                    touchRotateButton.SetActive(false);
                 }
             }
         }
-        if (Input.GetMouseButton(1)) {
-            cam.transform.position -= new Vector3(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"), 0) * Time.deltaTime * (7 + cam.orthographicSize);
+    }
+
+    public void RotateBlock(bool left = true) {
+        if (currentBlock) {
+            if (left) AudioManager.PlayOneShot(sndRotateBlock,.7f,false,1.2f);
+            else AudioManager.PlayOneShot(sndRotateBlock, .7f,false);
+            touchTimer++;
+            if (left) {
+                currentRot += 45;
+                if (currentRot > 360) currentRot -= 360;
+            } else {
+                currentRot -= 45;
+                if (currentRot < 0) currentRot += 360;
+            }
+            placementSprite.eulerAngles = new Vector3(0, 0, currentRot);
         }
-        if (!inputField.isFocused) cam.transform.position += new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Time.deltaTime * 10f;
-        cam.orthographicSize = Mathf.Max(2,cam.orthographicSize - Input.mouseScrollDelta.y * .5f);
+    }
+
+    public void CenterBlockToScreen() {
+        if (currentBlock) {
+            AudioManager.PlayOneShot(sndCenterBlock, .7f);
+            touchTimer++;
+            placementSprite.position = new Vector3(cam.transform.position.x, cam.transform.position.y, placementSprite.position.z);
+        }
+    }
+
+    public void RestartGame() {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     public void AddPoints(float blockHeight) {
-        if (!scoreUnderline.activeSelf) scoreUnderline.SetActive(true);
-        int newPoints = Mathf.RoundToInt(blockHeight + 5) * 100;
-        if (!gameOver) score += newPoints;
-        if (corNewPoints != null) StopCoroutine(corNewPoints);
-        corNewPoints = StartCoroutine(NewPoints(newPoints));
-        if (score > highScore && !newHighScoreAchieved && highScore > 0) { StartCoroutine(NewHighScore()); }
-        scoreText.text = score.ToString("#,#");
+        if (!gameOver) {
+            if (!scoreUnderline.activeSelf) scoreUnderline.SetActive(true);
+            int newPoints = Mathf.RoundToInt(blockHeight + 5) * 100;
+            score += newPoints;
+            if (corNewPoints != null) StopCoroutine(corNewPoints);
+            corNewPoints = StartCoroutine(NewPoints(newPoints));
+            if (score > highScore && !newHighScoreAchieved && highScore > 0) { StartCoroutine(NewHighScore()); }
+            scoreText.text = score.ToString("#,#");
+        }
     }
 
     public void GameOver() {
@@ -129,10 +274,16 @@ public class GameController : MonoBehaviour {
     }
 
     public void SetCurrentBlock(GameObject block) {
+        helperArrow.SetActive(false);
         currentBlock = block;
         placementSprite.GetComponent<SpriteRenderer>().sprite = currentBlock.GetComponent<SpriteRenderer>().sprite;
         placementSprite.transform.localScale = currentBlock.transform.localScale;
         placementSprite.gameObject.SetActive(true);
+        if (touch) {
+            touchTimer++;
+            touchRotateButton.SetActive(true);
+            placementSprite.transform.position = new Vector3 (currentBlock.transform.position.x, -1f, currentBlock.transform.position.z);
+        }
     }
 
     public void SparkEffect(Vector2 pos) {
@@ -165,6 +316,7 @@ public class GameController : MonoBehaviour {
         }
     }
 
+    bool waiting;
     IEnumerator GameLoop() {
 
         while(!gameOver) {
@@ -177,11 +329,12 @@ public class GameController : MonoBehaviour {
             inst.SetActive(true);
 
             bool finishedPlacingBlocks = true;
+            waiting = false;
 
             do {
                 finishedPlacingBlocks = true;
                 foreach (Block b in FindObjectsOfType<Block>()) {
-                    if (!b.placed) finishedPlacingBlocks = false;
+                    if (!b.placed) { finishedPlacingBlocks = false; if (currentBlock == null) waiting = true; break; }
                 }
                 if (FindObjectOfType<CommunismCrate>() != null) finishedPlacingBlocks = false;
                 if (currentBlock) finishedPlacingBlocks = false; 
@@ -190,6 +343,32 @@ public class GameController : MonoBehaviour {
 
 
             yield return new WaitForSeconds(3f);
+        }
+
+    }
+
+    IEnumerator HelperArrow() {
+        float timer = 12f;
+        bool arrowActive = false;
+        while (true) {
+            if (currentBlock == null && waiting && !gameOver) {
+                timer -= 2f;
+                if (timer <= 0) {
+                    if (!arrowActive) {
+                        helperArrow.SetActive(arrowActive = true);
+                        foreach (Block b in FindObjectsOfType<Block>()) {
+                            if (!b.placed) { helperArrow.transform.position = b.transform.position + Vector3.up * 3f; break; }
+                        }
+                        AudioManager.PlayOneShot(sndCenterBlock, .6f, false);
+                    }
+                }
+            } else {
+                timer = 12f;
+                if (arrowActive) {
+                    helperArrow.SetActive(arrowActive = false);
+                }
+            }
+            yield return new WaitForSeconds(2f);
         }
 
     }
@@ -214,6 +393,8 @@ public class GameController : MonoBehaviour {
             PlayerPrefs.SetString("highscore01name", inputFieldText.text);
             highscoreNameText.text = inputFieldText.text;
         }
+        highscoreTopRightText.text = "Highscore: " + score.ToString("#,#");
+        newHighScoreEndScreen.SetActive(false);
     }
 
     

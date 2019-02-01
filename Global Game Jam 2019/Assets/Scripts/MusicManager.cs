@@ -18,6 +18,7 @@ public class MusicManager : MonoBehaviour {
     }
 
     public void ToggleMusicOnOff() {
+        if (GameController.touch) GameController.touchTimer++;
         musicOn = !musicOn;
         if (musicOn) audioSource.volume = musicVol;
         else audioSource.volume = 0;
