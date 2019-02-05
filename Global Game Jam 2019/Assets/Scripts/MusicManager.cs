@@ -14,6 +14,10 @@ public class MusicManager : MonoBehaviour {
 
     public void Start() {
         musicVol = audioSource.volume;
+        
+    }
+
+    private void OnEnable() {
         StartCoroutine(Music());
     }
 
@@ -26,7 +30,13 @@ public class MusicManager : MonoBehaviour {
 
     IEnumerator Music() {
 
-        yield return new WaitForSeconds(2.8f);
+        yield return null;
+
+        while(!GameController.inst.gameStarted) {
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(2.85f);
 
         while (true) {
 

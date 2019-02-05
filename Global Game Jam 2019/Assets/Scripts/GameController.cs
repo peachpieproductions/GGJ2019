@@ -4,12 +4,12 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.Playables;
 
 public class GameController : MonoBehaviour {
 
-    
-
     public static GameController inst;
+    public bool gameStarted;
     public bool gameOver;
     public GameObject[] blockPrefabs;
     public GameObject currentBlock;
@@ -36,6 +36,10 @@ public class GameController : MonoBehaviour {
     public List<Vector2> sparksQueue;
     public int screenshotIndex;
     public GameObject helperArrow;
+    public PlayableDirector intro;
+    public bool introComplete;
+    public PhysicsTitle physicsTitle;
+    public GameObject tutorialText;
 
     //Touch / Mobile
     public static bool touch;
@@ -57,10 +61,11 @@ public class GameController : MonoBehaviour {
     public AudioClip sndCenterBlock;
     public AudioClip sndRotateBlock;
 
-
+    float cooldown;
     bool newHighScoreAchieved;
 
     private void Awake() {
+        physicsTitle.gameObject.SetActive(false);
         #if UNITY_ANDROID
             touch = true;
         #endif
@@ -78,9 +83,8 @@ public class GameController : MonoBehaviour {
             touchRestartButton.SetActive(true);
         }
 
-        StartCoroutine(GameLoop());
         StartCoroutine(Sparks());
-        StartCoroutine(HelperArrow());
+
     }
 
     private void LateUpdate() {
@@ -96,111 +100,143 @@ public class GameController : MonoBehaviour {
         //Set mouse world position
         mouseWorldPos = cam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 1));
 
-        //Set placement sprite
-        if (!touch) {
-            placementSprite.position = mouseWorldPos;
-            //placementSprite.position += Vector3.back * .1f;
-        } else {
-            if (currentBlock && Input.touchCount == 1) {
-                placementSprite.position += (Vector3) Input.GetTouch(0).deltaPosition * Time.deltaTime;
-            }
-        }
+        if (gameStarted) {
 
+            //cooldown
+            if (cooldown > 0) cooldown -= Time.deltaTime;
 
-        //Game Over
-        if (gameOver) {
-
-            //Restart Game
-            if (Input.GetKeyDown(KeyCode.R) && !inputField.isFocused) {
-                RestartGame();
-            }
-            
-        }
-
-        //Erase Files
-        if (Input.GetKey(KeyCode.RightControl)) {
-            if (Input.GetKey(KeyCode.RightShift)) {
-                if (Input.GetKeyDown(KeyCode.Delete)) {
-                    PlayerPrefs.DeleteKey("highscore01");
-                    PlayerPrefs.DeleteKey("highscore01name");
-                    PlayerPrefs.DeleteKey("screenshotIndex");
-                    AudioManager.PlayOneShot(sndNewHighScore);
+            //Set placement sprite
+            if (!touch) {
+                placementSprite.position = mouseWorldPos;
+                //placementSprite.position += Vector3.back * .1f;
+            } else {
+                if (currentBlock && Input.touchCount == 1) {
+                    placementSprite.position += (Vector3)Input.GetTouch(0).deltaPosition * Time.deltaTime;
                 }
             }
-        }
 
-        //Place Current Block
-        if (!touch) {
-            if (Input.GetMouseButtonUp(0)) {
-                PlaceBlock();
+
+            //Game Over
+            if (gameOver) {
+
+                //Set highscore name
+                if (Input.GetKeyDown(KeyCode.Return)) {
+                    SaveNewHighScoreName();
+                }
+
+                //Restart Game
+                if (Input.GetKeyDown(KeyCode.R) && !inputField.isFocused) {
+                    RestartGame();
+                }
+
             }
-        }
 
-        //Rotate Current Block
-        if (Input.GetKeyDown(KeyCode.R) || Input.GetMouseButtonDown(2)) {
-            if (Input.GetKey(KeyCode.LeftShift)) RotateBlock(false);
-            else RotateBlock(true);
-        }
+            //Erase Files
+            if (Input.GetKey(KeyCode.RightControl)) {
+                if (Input.GetKey(KeyCode.RightShift)) {
+                    if (Input.GetKeyDown(KeyCode.Delete)) {
+                        PlayerPrefs.DeleteKey("highscore01");
+                        PlayerPrefs.DeleteKey("highscore01name");
+                        PlayerPrefs.DeleteKey("screenshotIndex");
+                        AudioManager.PlayOneShot(sndNewHighScore);
+                    }
+                }
+            }
+
+            //Place Current Block
+            if (!touch) {
+                if (Input.GetMouseButtonDown(0)) {
+                    PlaceBlock();
+                }
+            }
+
+            //Rotate Current Block
+            if (Input.GetKeyDown(KeyCode.R) || Input.GetMouseButtonDown(2)) {
+                if (Input.GetKey(KeyCode.LeftShift)) RotateBlock(false);
+                else RotateBlock(true);
+            }
 
 
-        //Camera Control
-        if (touch) {
+            //Camera Control
+            if (touch) {
 
-            if (Input.touchCount > 0) {
-                touchTimer += Time.deltaTime;
+                if (Input.touchCount > 0) {
+                    touchTimer += Time.deltaTime;
 
-                if (Input.touches[0].deltaPosition.magnitude > .4f) dragging = true;
+                    if (Input.touches[0].deltaPosition.magnitude > .4f) dragging = true;
 
-                //Camera Zoom (touch)
-                float fingerDistDelta = 0f;
-                if (Input.touchCount > 1) {
-                    if (!twoFingersDown) {
-                        twoFingersDown = true;
+                    //Camera Zoom (touch)
+                    float fingerDistDelta = 0f;
+                    if (Input.touchCount > 1) {
+                        if (!twoFingersDown) {
+                            twoFingersDown = true;
+                            prevTwoFingerDist = (Input.touches[0].position - Input.touches[1].position).magnitude;
+                        }
+                        fingerDistDelta = prevTwoFingerDist - (Input.touches[0].position - Input.touches[1].position).magnitude;
+                        if (Mathf.Abs(fingerDistDelta) > 2) cam.orthographicSize = cam.orthographicSize + fingerDistDelta * Time.deltaTime * .5f;
                         prevTwoFingerDist = (Input.touches[0].position - Input.touches[1].position).magnitude;
+                    } else {
+                        twoFingersDown = false;
                     }
-                    fingerDistDelta = prevTwoFingerDist - (Input.touches[0].position - Input.touches[1].position).magnitude;
-                    if (Mathf.Abs(fingerDistDelta) > 2) cam.orthographicSize = cam.orthographicSize + fingerDistDelta * Time.deltaTime * .5f;
-                    prevTwoFingerDist = (Input.touches[0].position - Input.touches[1].position).magnitude;
-                } else {
-                    twoFingersDown = false;
-                }
 
-                //Camera Movement (touch)
-                if (Input.touchCount > 1 || Input.touchCount == 1 && currentBlock == null) {
-                    if (Input.GetTouch(0).deltaPosition.magnitude > 2f) {
-                        cam.transform.position -= (Vector3)Input.GetTouch(0).deltaPosition * Time.deltaTime * .8f * Mathf.Max(1, (cam.orthographicSize - 6) * .2f);
+                    //Camera Movement (touch)
+                    if (Input.touchCount > 1 || Input.touchCount == 1 && currentBlock == null) {
+                        if (Input.GetTouch(0).deltaPosition.magnitude > 2f) {
+                            cam.transform.position -= (Vector3)Input.GetTouch(0).deltaPosition * Time.deltaTime * .8f * Mathf.Max(1, (cam.orthographicSize - 6) * .2f);
+                        }
                     }
-                }
-                
-            }
-            if (Input.GetMouseButtonDown(0)) { //Touch Down
-                touchTimer = 0;
-                dragging = false;
-            }
-            if (Input.GetMouseButtonUp(0)) { //Touch Up
-                
-            }
-        } else {
-            //Camera Movement
-            if (Input.GetMouseButton(1)) {
-                cam.transform.position -= new Vector3(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"), 0) * Time.deltaTime * (7 + cam.orthographicSize);
-            }
-            if (!inputField.isFocused) cam.transform.position += new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Time.deltaTime * 10f;
 
-            //Camera Zoom
-            cam.orthographicSize = cam.orthographicSize - Input.mouseScrollDelta.y * .5f;
+                }
+                if (Input.GetMouseButtonDown(0)) { //Touch Down
+                    touchTimer = 0;
+                    dragging = false;
+                }
+                if (Input.GetMouseButtonUp(0)) { //Touch Up
+
+                }
+            } else {
+                //Camera Movement
+                if (Input.GetMouseButton(1)) {
+                    cam.transform.position -= new Vector3(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"), 0) * Time.deltaTime * (7 + cam.orthographicSize);
+                }
+                if (!inputField.isFocused) cam.transform.position += new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Time.deltaTime * 10f;
+
+                //Camera Zoom
+                cam.orthographicSize = cam.orthographicSize - Input.mouseScrollDelta.y * .5f;
+            }
+
+            //Camera Bounds
+            cam.transform.position = new Vector3(Mathf.Clamp(cam.transform.position.x, -20, 20), Mathf.Max(-8, cam.transform.position.y), cam.transform.position.z);
+            cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, 2f, 40f);
+
+            //Sin wave for helper arrow
+            if (helperArrow.activeSelf) helperArrow.transform.GetChild(0).localPosition = new Vector3(0, Mathf.Sin(Time.time * 5) * .75f, 0);
+
         }
+        else {
+            if (!introComplete) {
+                if (Input.GetMouseButtonDown(0)) {
+                    introComplete = true;
+                    intro.time = intro.duration;
+                    
+                }
+            }
+        }
+    }
 
-        //Camera Bounds
-        cam.transform.position = new Vector3(Mathf.Clamp(cam.transform.position.x, -20, 20), Mathf.Max(-8, cam.transform.position.y), cam.transform.position.z);
-        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, 2f, 40f);
-
-        //Sin wave for helper arrow
-        if (helperArrow.activeSelf) helperArrow.transform.GetChild(0).localPosition = new Vector3(0, Mathf.Sin(Time.time * 5) * .75f, 0);
+    public void StartGame() {
+        gameStarted = true;
+        highscoreTopRightText.transform.parent.gameObject.SetActive(true);
+        intro.gameObject.SetActive(false);
+        physicsTitle.gameObject.SetActive(false);
+        if (!touch) tutorialText.SetActive(true);
+        StartCoroutine(GameLoop());
+        
+        StartCoroutine(HelperArrow());
     }
 
     public void PlaceBlock() {
-        if (currentBlock) {
+        if (currentBlock && cooldown <= 0) {
             if (placementSprite.position.y > 0 || placementSprite.position.x > -6) { //cant drop block in crate area
                 AudioManager.PlayOneShot(sndPlaceBlock, .35f);
                 currentBlock.SetActive(true);
@@ -274,6 +310,8 @@ public class GameController : MonoBehaviour {
     }
 
     public void SetCurrentBlock(GameObject block) {
+        if (touch) cooldown = 1f;
+        else cooldown = .3f;
         helperArrow.SetActive(false);
         currentBlock = block;
         placementSprite.GetComponent<SpriteRenderer>().sprite = currentBlock.GetComponent<SpriteRenderer>().sprite;
@@ -282,7 +320,25 @@ public class GameController : MonoBehaviour {
         if (touch) {
             touchTimer++;
             touchRotateButton.SetActive(true);
-            placementSprite.transform.position = new Vector3 (currentBlock.transform.position.x, -1f, currentBlock.transform.position.z);
+            float placementHeight = -4;
+            foreach(Block b in FindObjectsOfType<Block>()) {
+                var ypos = b.transform.GetComponent<Collider2D>().bounds.extents.y + b.transform.GetComponent<Collider2D>().bounds.center.y;
+                if (b.placed && ypos > placementHeight) {
+                    placementHeight = ypos;
+                }
+            }
+            placementSprite.transform.position = new Vector3 (0, placementHeight + 2f, currentBlock.transform.position.z);
+            if (placementHeight + 2.5f > cam.transform.position.y + cam.orthographicSize)
+                StartCoroutine(TweenCameraTo(new Vector2 (cam.transform.position.x, placementHeight - cam.orthographicSize * .25f)));
+        }
+    }
+
+    IEnumerator TweenCameraTo(Vector2 pos) {
+        bool cancel = false;
+        while(!cancel) {
+            if (Input.GetMouseButtonDown(0)) cancel = true;
+            cam.transform.position = Vector3.Lerp(cam.transform.position, new Vector3(pos.x, pos.y, cam.transform.position.z), Time.deltaTime * 5f);
+            yield return null;
         }
     }
 
@@ -389,12 +445,18 @@ public class GameController : MonoBehaviour {
     }
 
     public void SaveNewHighScoreName() {
-        if (inputFieldText.text != "") {
-            PlayerPrefs.SetString("highscore01name", inputFieldText.text);
-            highscoreNameText.text = inputFieldText.text;
+        if (newHighScoreEndScreen.activeSelf) {
+            if (inputFieldText.text != "") {
+                PlayerPrefs.SetString("highscore01name", inputFieldText.text);
+                highscoreNameText.text = inputFieldText.text;
+            }
+            highscoreTopRightText.text = "Highscore: " + score.ToString("#,#");
+            newHighScoreEndScreen.SetActive(false);
         }
-        highscoreTopRightText.text = "Highscore: " + score.ToString("#,#");
-        newHighScoreEndScreen.SetActive(false);
+    }
+
+    public void ClickSound(float freq = 1) {
+        AudioManager.PlayOneShot(sndRotateBlock, .5f, false, freq);
     }
 
     
