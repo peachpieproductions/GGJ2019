@@ -1,12 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class AudioManager : MonoBehaviour {
 
 
     public static AudioSource audioSource;
+    public AudioSource introAudioSource;
     public static List<AudioClip> clipsPlayedRecently = new List<AudioClip>();
+    public static float volumeMult = 1f;
 
     private void Awake() {
         audioSource = GetComponent<AudioSource>();
@@ -14,6 +17,11 @@ public class AudioManager : MonoBehaviour {
 
     private void Start() {
         StartCoroutine(ClearClipCache());
+    }
+
+    public void SetVolume(Slider slider) {
+        volumeMult = slider.value;
+        introAudioSource.volume = slider.value;
     }
 
 
@@ -24,7 +32,7 @@ public class AudioManager : MonoBehaviour {
             if (setPitch != 1) audioSource.pitch = setPitch;
             else if (randomPitch) audioSource.pitch = Random.Range(.8f, 1.2f);
             else audioSource.pitch = 1f;
-            audioSource.PlayOneShot(ac, Mathf.Min(1,vol));
+            audioSource.PlayOneShot(ac, Mathf.Min(1,vol) * volumeMult);
         } 
 
     }

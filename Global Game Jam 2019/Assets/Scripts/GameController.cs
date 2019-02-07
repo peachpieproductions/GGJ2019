@@ -40,6 +40,9 @@ public class GameController : MonoBehaviour {
     public bool introComplete;
     public PhysicsTitle physicsTitle;
     public GameObject tutorialText;
+    public Options optionsMenu;
+    public Transform tutorial;
+    public GameObject hudButtons;
 
     //Touch / Mobile
     public static bool touch;
@@ -61,6 +64,12 @@ public class GameController : MonoBehaviour {
     public AudioClip sndCenterBlock;
     public AudioClip sndRotateBlock;
 
+    [Header("Creative Mode")]
+    public bool creativeMode;
+    public GameObject creativeModeUI;
+    public GameObject blockPicker;
+    public Button blockSelectionTemplate;
+
     float cooldown;
     bool newHighScoreAchieved;
 
@@ -79,6 +88,8 @@ public class GameController : MonoBehaviour {
         else highscoreTopRightText.text = "";
         highscoreNameText.text = PlayerPrefs.GetString("highscore01name");
 
+        optionsMenu.LoadSettings();
+
         if (touch) {
             touchRestartButton.SetActive(true);
         }
@@ -90,9 +101,14 @@ public class GameController : MonoBehaviour {
     private void LateUpdate() {
         if (touch) {
             if (Input.GetMouseButtonUp(0) && touchTimer < .2f && !dragging) {
-                PlaceBlock();
+                if (!creativeMode) PlaceBlock();
+                else PlaceBlockCreativeMode();
             }
         } 
+        
+        if (Input.GetKeyDown(KeyCode.F10)) {
+            TakeScreenshot();
+        }
     }
 
     public void Update() {
@@ -146,7 +162,8 @@ public class GameController : MonoBehaviour {
             //Place Current Block
             if (!touch) {
                 if (Input.GetMouseButtonDown(0)) {
-                    PlaceBlock();
+                    if (!creativeMode) PlaceBlock();
+                    else PlaceBlockCreativeMode();
                 }
             }
 
@@ -202,7 +219,9 @@ public class GameController : MonoBehaviour {
                 if (!inputField.isFocused) cam.transform.position += new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Time.deltaTime * 10f;
 
                 //Camera Zoom
-                cam.orthographicSize = cam.orthographicSize - Input.mouseScrollDelta.y * .5f;
+                if (!creativeMode || !blockPicker.activeSelf || creativeMode && mouseWorldPos.y > cam.transform.position.y - cam.orthographicSize * .6f) {
+                    cam.orthographicSize = cam.orthographicSize - Input.mouseScrollDelta.y * .5f;
+                }
             }
 
             //Camera Bounds
@@ -224,15 +243,24 @@ public class GameController : MonoBehaviour {
         }
     }
 
-    public void StartGame() {
+    public void StartGame(bool creativeModeOn = false) {
+        creativeMode = creativeModeOn;
         gameStarted = true;
-        highscoreTopRightText.transform.parent.gameObject.SetActive(true);
         intro.gameObject.SetActive(false);
         physicsTitle.gameObject.SetActive(false);
         if (!touch) tutorialText.SetActive(true);
+        hudButtons.SetActive(true);
+
+        if (creativeMode) {
+            creativeModeUI.SetActive(true);
+            StartCreativeMode();
+        } else {
+            highscoreTopRightText.transform.parent.gameObject.SetActive(true);
+            StartCoroutine(HelperArrow());
+        }
+
         StartCoroutine(GameLoop());
         
-        StartCoroutine(HelperArrow());
     }
 
     public void PlaceBlock() {
@@ -284,7 +312,7 @@ public class GameController : MonoBehaviour {
     }
 
     public void AddPoints(float blockHeight) {
-        if (!gameOver) {
+        if (!gameOver && !creativeMode) {
             if (!scoreUnderline.activeSelf) scoreUnderline.SetActive(true);
             int newPoints = Mathf.RoundToInt(blockHeight + 5) * 100;
             score += newPoints;
@@ -296,15 +324,17 @@ public class GameController : MonoBehaviour {
     }
 
     public void GameOver() {
-        if (!gameOver) {
-            gameOver = true;
-            gameOverText.SetActive(true);
-            invisibleWall.SetActive(false);
+        if (!creativeMode) {
+            if (!gameOver) {
+                gameOver = true;
+                gameOverText.SetActive(true);
+                invisibleWall.SetActive(false);
 
-            if (score > highScore) {
-                highScore = score;
-                PlayerPrefs.SetInt("highscore01", highScore);
-                newHighScoreEndScreen.SetActive(true);
+                if (score > highScore) {
+                    highScore = score;
+                    PlayerPrefs.SetInt("highscore01", highScore);
+                    newHighScoreEndScreen.SetActive(true);
+                }
             }
         }
     }
@@ -375,30 +405,37 @@ public class GameController : MonoBehaviour {
     bool waiting;
     IEnumerator GameLoop() {
 
-        while(!gameOver) {
+        if (!creativeMode) {
+            while (!gameOver) {
 
-            AudioManager.PlayOneShot(sndPlane, .8f, false);
+                AudioManager.PlayOneShot(sndPlane, .8f, false);
 
-            yield return new WaitForSeconds(2f);
+                yield return new WaitForSeconds(2f);
 
-            var inst = Instantiate(communistCrate);
-            inst.SetActive(true);
+                var inst = Instantiate(communistCrate);
+                inst.SetActive(true);
 
-            bool finishedPlacingBlocks = true;
-            waiting = false;
+                bool finishedPlacingBlocks = true;
+                waiting = false;
 
-            do {
-                finishedPlacingBlocks = true;
-                foreach (Block b in FindObjectsOfType<Block>()) {
-                    if (!b.placed) { finishedPlacingBlocks = false; if (currentBlock == null) waiting = true; break; }
-                }
-                if (FindObjectOfType<CommunismCrate>() != null) finishedPlacingBlocks = false;
-                if (currentBlock) finishedPlacingBlocks = false; 
-                yield return new WaitForSeconds(1f);
-            } while (!finishedPlacingBlocks);
+                do {
+                    finishedPlacingBlocks = true;
+                    foreach (Block b in FindObjectsOfType<Block>()) {
+                        if (!b.placed) { finishedPlacingBlocks = false; if (currentBlock == null) waiting = true; break; }
+                    }
+                    if (FindObjectOfType<CommunismCrate>() != null) finishedPlacingBlocks = false;
+                    if (currentBlock) finishedPlacingBlocks = false;
+                    yield return new WaitForSeconds(1f);
+                } while (!finishedPlacingBlocks);
 
 
-            yield return new WaitForSeconds(3f);
+                yield return new WaitForSeconds(3f);
+            }
+        } else {
+            while (true) {
+
+                yield return null;
+            }
         }
 
     }
@@ -459,7 +496,49 @@ public class GameController : MonoBehaviour {
         AudioManager.PlayOneShot(sndRotateBlock, .5f, false, freq);
     }
 
-    
+    public void StartTutorial() {
+        tutorial.gameObject.SetActive(true);
+        foreach(Transform t in tutorial) {
+            t.gameObject.SetActive(true);
+        }
+    }
+
+    public void StartCreativeMode() {
+        foreach(GameObject go in blockPrefabs) {
+            var inst = Instantiate(blockSelectionTemplate, blockSelectionTemplate.transform.parent);
+            inst.transform.GetChild(0).GetComponent<Image>().sprite = go.GetComponent<SpriteRenderer>().sprite;
+        }
+        blockSelectionTemplate.gameObject.SetActive(false);
+        invisibleWall.SetActive(false);
+    }
+
+    public void SetCurrentBlockByIndex(Transform index) {
+        if (touch) cooldown = 1f;
+        else cooldown = .3f;
+        currentBlock = blockPrefabs[index.GetSiblingIndex() - 1];
+        placementSprite.GetComponent<SpriteRenderer>().sprite = currentBlock.GetComponent<SpriteRenderer>().sprite;
+        placementSprite.transform.localScale = currentBlock.transform.localScale;
+        placementSprite.gameObject.SetActive(true);
+        if (touch) {
+            touchTimer++;
+            touchRotateButton.SetActive(true);
+            placementSprite.transform.position = new Vector3(cam.transform.position.x, cam.transform.position.y, currentBlock.transform.position.z);
+        }
+    }
+
+    public void PlaceBlockCreativeMode() {
+        if (currentBlock && cooldown <= 0) {
+            if (placementSprite.position.y > -4) {
+                if (placementSprite.position.y > cam.transform.position.y - cam.orthographicSize * .6 && blockPicker.activeSelf ||
+                    placementSprite.position.y > cam.transform.position.y - cam.orthographicSize * .87 && !blockPicker.activeSelf) {
+                    AudioManager.PlayOneShot(sndPlaceBlock, .35f);
+                    var newBlock = Instantiate(currentBlock, placementSprite.position, placementSprite.rotation);
+                    newBlock.GetComponent<Block>().placed = true;
+                    newBlock.layer = 9 >> 0;
+                }
+            }
+        }
+    }
 
 
 

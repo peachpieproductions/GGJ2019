@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MusicManager : MonoBehaviour {
 
@@ -26,6 +27,11 @@ public class MusicManager : MonoBehaviour {
         musicOn = !musicOn;
         if (musicOn) audioSource.volume = musicVol;
         else audioSource.volume = 0;
+    }
+
+    public void SetVolume(Slider slider) {
+        musicVol = slider.value;
+        audioSource.volume = musicVol * .38f;
     }
 
     IEnumerator Music() {

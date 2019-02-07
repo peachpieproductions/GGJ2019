@@ -10,7 +10,7 @@ public class CommunismCrate : MonoBehaviour {
 
 
 
-    private void OnMouseDown() {
+    private void OnMouseUp() {
         Destroy(gameObject);
         AudioManager.PlayOneShot(sndSmash);
         for(var i = 0; i < 4; i++) {
