@@ -66,6 +66,7 @@ public class GameController : MonoBehaviour {
 
     [Header("Creative Mode")]
     public bool creativeMode;
+    public GameObject creativeModeMenuButton;
     public GameObject creativeModeUI;
     public GameObject blockPicker;
     public Button blockSelectionTemplate;
@@ -83,6 +84,7 @@ public class GameController : MonoBehaviour {
     private void Start() {
         inst = this;
         highScore = PlayerPrefs.GetInt("highscore01");
+        creativeModeMenuButton.SetActive(highScore > 100000);
         screenshotIndex = PlayerPrefs.GetInt("screenshotIndex");
         if (highScore > 0) highscoreTopRightText.text = "Highscore: " + highScore.ToString("#,#");
         else highscoreTopRightText.text = "";

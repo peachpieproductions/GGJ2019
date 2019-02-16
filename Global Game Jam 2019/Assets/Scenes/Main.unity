@@ -9243,8 +9243,9 @@ MonoBehaviour:
   sndScreenshot: {fileID: 8300000, guid: ce04e436f3690094e8c7c5c413924372, type: 3}
   sndPlaceBlock: {fileID: 8300000, guid: 4a5128d00f71b78498a8756719b732e8, type: 3}
   sndCenterBlock: {fileID: 8300000, guid: d4d570851d1b8c343a8f40d1913bc333, type: 3}
-  sndRotateBlock: {fileID: 8300000, guid: 5f4a93da65e62cd488fcff15a5757d19, type: 3}
+  sndRotateBlock: {fileID: 8300000, guid: 0c9e9cbe29e937043904aa2608b1a4cf, type: 3}
   creativeMode: 0
+  creativeModeMenuButton: {fileID: 1596824539}
   creativeModeUI: {fileID: 446676369}
   blockPicker: {fileID: 134787341}
   blockSelectionTemplate: {fileID: 32153803}
