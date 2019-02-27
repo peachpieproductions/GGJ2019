@@ -43,6 +43,7 @@ public class GameController : MonoBehaviour {
     public Options optionsMenu;
     public Transform tutorial;
     public GameObject hudButtons;
+    public GameObject exitCreativeModeButton;
 
     //Touch / Mobile
     public static bool touch;
@@ -253,6 +254,7 @@ public class GameController : MonoBehaviour {
         if (!touch) tutorialText.SetActive(true);
         hudButtons.SetActive(true);
 
+        exitCreativeModeButton.SetActive(creativeMode);
         if (creativeMode) {
             creativeModeUI.SetActive(true);
             StartCreativeMode();
